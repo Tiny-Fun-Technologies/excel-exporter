@@ -1,0 +1,22 @@
+{
+	"compilerOptions": {
+		"target": "ES2018",
+		"module": "commonjs",
+		"lib": [ "ESNext", "DOM" ],
+		"declaration": false,
+		"allowJs": true,
+		"checkJs": true,
+		"sourceMap": true,
+		"outDir": "dist",
+		"moduleResolution": "node",
+		"baseUrl": "src",
+		"experimentalDecorators": true,
+		"emitDecoratorMetadata": true
+	},
+	"include": [
+		"src/**/*"
+	],
+	"exclude": [
+		"node_modules/**/*"
+	]
+}
