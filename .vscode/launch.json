@@ -8,7 +8,10 @@
 			"skipFiles": [
 				"<node_internals>/**"
 			],
-			"program": "${workspaceFolder}/dist/binary.js"
+			"program": "${workspaceFolder}/dist/binary.js",
+			"args": [
+				"./excel-exporter.json"
+			]
 		}
 	]
 }
