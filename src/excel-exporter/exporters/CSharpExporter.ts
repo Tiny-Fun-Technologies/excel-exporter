@@ -62,7 +62,7 @@ export class CSharpExporter extends TableExporter {
 				comment = comment.split("\n").join("\t");
 				body += this.line(`/// <summary>${comment}</summary>`, 1);
 			}
-			body += this.line(`${type} ${field.name};`, 1);
+			body += this.line(`public ${type} ${field.name};`, 1);
 		}
 		let class_text = this.line(`public class ${name} : ${base_type} {\n${body}\n}`);
 		this.classes.push(class_text);
