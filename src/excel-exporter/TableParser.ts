@@ -19,6 +19,14 @@ export enum DataType {
 	string = 'string',
 }
 
+const TypeCompatibility = {
+	string: 5,
+	float: 4,
+	int: 3,
+	bool: 2,
+	null: 1
+};
+
 export interface ColumnDescription {
 	type: DataType;
 	name: string;
@@ -165,6 +173,9 @@ export class TableParser {
 				let field = field_maps.get(column.name);
 				field.column.is_array = true;
 				field.indexes.push(c_idx);
+				if (TypeCompatibility[column.type] > TypeCompatibility[field.column.type]) {
+					field.column.type = column.type;
+				}
 			}
 			c_idx += 1;
 		}
