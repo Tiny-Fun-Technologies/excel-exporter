@@ -24,13 +24,18 @@
 	* 空(`null`)
 * 该工具设计原则是简单易用，表格字段可由策划自由调整，不支持数据引用，暂不支持结构体
 
-## Windows 安装
-安装 NodeJS, 注意勾选将 Node 添加到环境变量 `PATH` 中
+## 安装
+- 安装 NodeJS 和 NPM, 注意将 Node 和 NPM 添加到环境变量 `PATH` 中
+- 执行下面的命令构建项目，将生成的 `dist` 复制到到您的项目中
+```
+npm run build
+```
 
 ## 使用
-	修改配置表
-	修改 excel-exporter.json 修改工具配置
-	双击 转表.bat 执行转换工作
+- 按照上面介绍的规则填写 Excel 配置表
+- 修改 `excel-exporter.json` 修改工具配置，配置要读取的 Excel 文件列表，配置你需要的导出器
+- Windows 下双击 `转表.bat` 执行转换工作
+- Linux/macOS 下执行 `转表.sh` 执行转换工作
 
 ### 配置示例
 
