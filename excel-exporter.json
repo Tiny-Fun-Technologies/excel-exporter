@@ -1,15 +1,6 @@
 {
 	"input": [
-		{ "file": "士兵表.xlsx", "encode": "GBK"},
-		{ "file": "统帅表.xlsx", "encode": "GBK"},
-		{ "file": "武器表.xlsx", "encode": "GBK"},
-		{ "file": "装备表.xlsx", "encode": "GBK"},
-		{ "file": "关卡表.xlsx", "encode": "GBK"},
-		{ "file": "箱子奖励招募表.xlsx", "encode": "GBK"},
-		{ "file": "僵尸表.xlsx", "encode": "GBK"},
-		{ "file": "任务表.xlsx", "encode": "GBK"},
-		{ "file": "伤害动作表.xlsx", "encode": "GBK"},
-		{ "file": "签到表.xlsx", "encode": "GBK"}
+		{ "file": "配置表.xlsx", "encode": "GBK"}
 	],
 	"parser": {
 		"first_row_as_field_comment": true
