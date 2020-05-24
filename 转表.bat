@@ -1,2 +1,2 @@
-call node ./dist/binary.js ./excel-exporter.json
+call node ./binary.js ./excel-exporter.json
 pause
