@@ -4,6 +4,7 @@ import { ExporterConfigs, TableExporter } from "./TableExporter";
 import { JSONExporter } from "./exporters/JSONExporter";
 import { CSharpExporter } from "./exporters/CSharpExporter";
 import * as colors from "colors";
+import { TypeScriptExporter } from "./exporters/TypeScriptExporter";
 
 export interface Configurations {
 	/** 解析配置 */
@@ -18,6 +19,7 @@ export interface Configurations {
 const exporters: {[key:string]: new(config: ExporterConfigs) => TableExporter } = {
 	json: JSONExporter,
 	csharp: CSharpExporter,
+	typescript: TypeScriptExporter,
 }
 
 

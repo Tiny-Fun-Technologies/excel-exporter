@@ -5,7 +5,7 @@
 ## 支持将Excel配置表导出为:
 - [x] JSON 文件
 - [x] C# 类型声明
-- [ ] TypeScript 声明文件、类型文件（可用 `instanceof` 进行类型检查）
+- [x] TypeScript interface类型声明、class类型定义（可用 `instanceof` 进行类型检查）
 - [ ] Godot 引擎的 GDScript 脚本文件
 
 ## 表格格式说明
@@ -42,8 +42,7 @@ npm run build
 ```json
 {
 	"input": [
-		{ "file": "装备表.xlsx", "encode": "GBK"},
-		{ "file": "关卡表.xlsx", "encode": "GBK"},
+		{ "file": "配置表.xlsx", "encode": "GBK"}
 	],
 	"parser": {
 		"first_row_as_field_comment": true
@@ -51,16 +50,25 @@ npm run build
 	"output": {
 		"json": {
 			"enabled": true,
-			"directory": "../../client/Assets/Resources/data/json",
+			"directory": "output/json",
 			"indent": "\t"
 		},
 		"csharp": {
 			"enabled": true,
-			"directory": "../../client/Assets/Resources/data/csharp",
+			"directory": "output/csharp",
 			"namespace": "game.data",
 			"base_type": "tiny.data.UniqueIDObject",
 			"file_name": "data",
 			"ignore_id": true
+		},
+		"typescript": {
+			"enabled": true,
+			"declaration": false,
+			"type": "class",
+			"class_name_prefix": "",
+			"class_name_extension": "Data",
+			"directory": "output/typescript",
+			"file_name": "data"
 		}
 	}
 }
