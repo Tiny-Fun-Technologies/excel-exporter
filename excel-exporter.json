@@ -8,16 +8,25 @@
 	"output": {
 		"json": {
 			"enabled": true,
-			"directory": "../../client/Assets/Resources/data/json",
+			"directory": "output/json",
 			"indent": "\t"
 		},
 		"csharp": {
 			"enabled": true,
-			"directory": "../../client/Assets/Resources/data/csharp",
+			"directory": "output/csharp",
 			"namespace": "game.data",
 			"base_type": "tiny.data.UniqueIDObject",
 			"file_name": "data",
 			"ignore_id": true
+		},
+		"typescript": {
+			"enabled": true,
+			"declaration": false,
+			"type": "class",
+			"class_name_prefix": "",
+			"class_name_extension": "Data",
+			"directory": "output/typescript",
+			"file_name": "data"
 		}
 	}
 }
