@@ -89,7 +89,7 @@ export class TableParser {
 	}
 
 	protected process_table(raw: RawTableData): TableData {
-
+		const type_order = [ DataType.string, DataType.float, DataType.int, DataType.bool, DataType.null];
 		let headers: ColumnDescription[] = [];
 
 		let column_values: xlsl.CellObject[][] = [];
@@ -109,17 +109,17 @@ export class TableParser {
 				ignored_columns.add(c);
 				continue;
 			}
-			let column_cells = this.get_column(rows, c, 1);
+			const start_raw = 1;
+			let column_cells = this.get_column(rows, c, start_raw);
 			let type = DataType.null;
-			let types = new Set<DataType>();
-			for (const cell of column_cells) {
-				types.add(this.get_data_type(cell));
-			}
-			let type_order = [ DataType.string, DataType.float, DataType.int, DataType.bool ];
-			for (const t of type_order) {
-				if (types.has(t)) {
+			for (let i = 0; i < column_cells.length; i++) {
+				const cell = column_cells[i];
+				var t = this.get_data_type(cell);
+				if (type_order.indexOf(t) < type_order.indexOf(type)) {
+					if (type != DataType.null) {
+						console.log(colors.yellow(`\t\t${first.v} 的数据类型被提升为 ${t}\n\t\t  ${this.dump_row_values(rows[start_raw + i])}`));
+					}
 					type = t;
-					break;
 				}
 			}
 			let comment: string = undefined;
@@ -217,7 +217,11 @@ export class TableParser {
 		}
 		let all_empty = true;
 		for (const cell of row) {
-			all_empty = all_empty && this.get_data_type(cell) == DataType.null;
+			let current_empty = this.get_data_type(cell) == DataType.null;
+			if (!current_empty) {
+				current_empty = this.get_data_type(cell) == DataType.string && (cell.v as string).trim().length == 0;
+			}
+			all_empty = all_empty && current_empty;
 		}
 		if (all_empty) return false;
 		return true;
@@ -262,5 +266,13 @@ export class TableParser {
 			default:
 				return null;
 		}
+	}
+
+	protected dump_row_values(row: xlsl.CellObject[]) {
+		let ret = [];
+		for (const cell of row) {
+			ret.push(this.get_cell_value(cell, this.get_data_type(cell)));
+		}
+		return ret;
 	}
 }
