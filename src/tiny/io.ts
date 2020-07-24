@@ -81,6 +81,15 @@ export class DirAccess {
 		}
 	}
 
+	static remove_file_or_error(path: string) {
+		switch (get_runtime()) {
+			case JavaScriptRuntime.NodeJS:
+				return NodeJSDirAccess.remove_file_or_error(path);
+			default:
+				return false;
+		}
+	}
+
 	static make_dir(p_dir: string, recursive: boolean = false) {
 		switch (get_runtime()) {
 			case JavaScriptRuntime.NodeJS:
@@ -165,5 +174,9 @@ export class NodeJSDirAccess extends DirAccess {
 
 	static make_dir(p_dir: string, recursive: boolean = false) {
 		fs.mkdirSync(p_dir, {recursive: true});
+	}
+
+	static remove_file_or_error(path: string) {
+		fs.unlinkSync(path);
 	}
 }
