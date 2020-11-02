@@ -8,6 +8,7 @@
 			"skipFiles": [
 				"<node_internals>/**"
 			],
+			"cwd": "D:/work/repositories/zombie/config/新配表",
 			"program": "${workspaceFolder}/dist/binary.js",
 			"args": [
 				"./excel-exporter.json"

@@ -40,6 +40,7 @@ export class TypeScriptExporter extends TableExporter {
 			switch (field.type) {
 				case DataType.bool:
 					type = "boolean";
+					break;
 				case DataType.string:
 					type = "string";
 					break;

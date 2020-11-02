@@ -256,7 +256,7 @@ export class TableParser {
 	protected get_cell_value(cell: xlsl.CellObject, type: DataType) {
 		switch (type) {
 			case DataType.bool:
-				return cell.v as boolean == true;
+				return cell && cell.v as boolean == true;
 			case DataType.int:
 				return cell ? cell.v as number : 0;
 			case DataType.float:
