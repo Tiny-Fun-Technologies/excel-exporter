@@ -9,6 +9,7 @@
 		"build": "node ./tools/build.js"
 	},
 	"devDependencies": {
+		"@types/js-yaml": "^3.12.5",
 		"@types/node": "^14.0.1",
 		"shelljs": "^0.8.4",
 		"ts-loader": "^7.0.4",
@@ -19,6 +20,7 @@
 	},
 	"dependencies": {
 		"colors": "^1.4.0",
+		"js-yaml": "^3.14.0",
 		"xlsx": "^0.16.0"
 	}
 }

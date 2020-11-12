@@ -15,6 +15,8 @@ export class TableExporter {
 		this.configs = configs;
 	}
 
+	get extension(): string { return ''}
+
 	protected line(text = "", indent = 0) {
 		let line = "";
 		for (let i = 0; i < indent; i++) {

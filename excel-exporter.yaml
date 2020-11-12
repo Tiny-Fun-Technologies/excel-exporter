@@ -1,0 +1,28 @@
+parser:
+  first_row_as_field_comment: true
+input:
+  - 配置表.xlsx
+output:
+  json:
+    enabled: true
+    directory: output/json
+    indent: "\t"
+  yaml:
+    enabled: true
+    directory: output/yaml
+    indent: 2
+  csharp:
+    enabled: true
+    directory: output/csharp
+    namespace: game.data
+    base_type: tiny.data.UniqueIDObject
+    file_name: data
+    ignore_id: true
+  typescript:
+    enabled: true
+    declaration: false
+    type: class
+    class_name_prefix: ''
+    class_name_extension: Data
+    directory: output/typescript
+    file_name: data

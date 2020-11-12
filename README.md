@@ -4,6 +4,7 @@
 
 ## 支持将Excel配置表导出为:
 - [x] JSON 文件
+- [x] YAML 文件
 - [x] C# 类型声明
 - [x] TypeScript interface类型声明、class类型定义（可用 `instanceof` 进行类型检查）
 - [ ] Godot 引擎的 GDScript 脚本文件
@@ -33,43 +34,40 @@ npm run build
 
 ## 使用
 - 按照上面介绍的规则填写 Excel 配置表
-- 修改 `excel-exporter.json` 修改工具配置，配置要读取的 Excel 文件列表，配置你需要的导出器
+- 修改 `excel-exporter.yaml` 修改工具配置，配置要读取的 Excel 文件列表，配置你需要的导出器
 - Windows 下双击 `转表.bat` 执行转换工作
 - Linux/macOS 下执行 `转表.sh` 执行转换工作
 
 ### 配置示例
 
-```json
-{
-	"input": [
-		{ "file": "配置表.xlsx", "encode": "GBK"}
-	],
-	"parser": {
-		"first_row_as_field_comment": true
-	},
-	"output": {
-		"json": {
-			"enabled": true,
-			"directory": "output/json",
-			"indent": "\t"
-		},
-		"csharp": {
-			"enabled": true,
-			"directory": "output/csharp",
-			"namespace": "game.data",
-			"base_type": "tiny.data.UniqueIDObject",
-			"file_name": "data",
-			"ignore_id": true
-		},
-		"typescript": {
-			"enabled": true,
-			"declaration": false,
-			"type": "class",
-			"class_name_prefix": "",
-			"class_name_extension": "Data",
-			"directory": "output/typescript",
-			"file_name": "data"
-		}
-	}
-}
+```yaml
+parser:
+  first_row_as_field_comment: true
+input:
+- file: 配置表.xlsx
+  encode: GBK
+output:
+  json:
+    enabled: true
+    directory: output/json
+    indent: "\t"
+  yaml:
+    enabled: true
+    directory: output/yaml
+    indent: 2
+  csharp:
+    enabled: true
+    directory: output/csharp
+    namespace: game.data
+    base_type: tiny.data.UniqueIDObject
+    file_name: data
+    ignore_id: true
+  typescript:
+    enabled: true
+    declaration: false
+    type: class
+    class_name_prefix: ''
+    class_name_extension: Data
+    directory: output/typescript
+    file_name: data
 ```

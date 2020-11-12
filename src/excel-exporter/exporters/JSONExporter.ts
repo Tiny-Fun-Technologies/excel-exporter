@@ -17,6 +17,8 @@ export class JSONExporter extends TableExporter {
 		}
 	}
 
+	get extension(): string { return 'json'}
+
 	protected recursively_order_keys(unordered: object | Array<object>) {
 		// If it's an array - recursively order any
 		// dictionary items within the array
@@ -37,18 +39,7 @@ export class JSONExporter extends TableExporter {
 		return unordered;
 	}
 
-	export(name: string, table: TableData) {
-		const file = path.join(this.configs.directory, name + ".json");
-		let headers = table.headers;
-		let values = [];
-		for (const row of table.values) {
-			let new_row = {};
-			for (let i = 0; i < headers.length; i++) {
-				const field = headers[i];
-				new_row[field.name] = row[i];
-			}
-			values.push(new_row);
-		}
+	protected get indent(): string {
 		let indent = "";
 		const configs = (this.configs as JSONExporterConfigs);
 		if (configs.indent) {
@@ -60,7 +51,26 @@ export class JSONExporter extends TableExporter {
 				indent = configs.indent;
 			}
 		}
-		const text = JSON.stringify(this.recursively_order_keys(values), null, indent);
+		return indent;
+	}
+
+	export_json_object(name: string, table: TableData) {
+		let headers = table.headers;
+		let values = [];
+		for (const row of table.values) {
+			let new_row = {};
+			for (let i = 0; i < headers.length; i++) {
+				const field = headers[i];
+				new_row[field.name] = row[i];
+			}
+			values.push(new_row);
+		}
+		return this.recursively_order_keys(values);
+	}
+
+	export(name: string, table: TableData) {
+		const file = path.join(this.configs.directory, `${name}.${this.extension}`);
+		const text = JSON.stringify(this.export_json_object(name, table), null, this.indent);
 		this.save_text(file, text);
 		console.log(colors.green(`\t ${name} ==> ${file}`));
 	}

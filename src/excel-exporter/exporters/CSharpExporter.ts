@@ -13,6 +13,7 @@ interface CSharpExporterConfigs extends ExporterConfigs {
 export class CSharpExporter extends TableExporter {
 	protected declear_content = "";
 	protected classes: string[] = [];
+	get extension(): string { return 'cs' }
 
 	constructor(configs: ExporterConfigs) {
 		super(configs);
@@ -33,7 +34,6 @@ export class CSharpExporter extends TableExporter {
 		this.declear_content += this.line("%CLASSES%");
 		this.declear_content += this.line("}");
 	}
-
 
 	export(name: string, table: TableData) {
 		const base_type = (this.configs as CSharpExporterConfigs).base_type;
@@ -77,7 +77,7 @@ export class CSharpExporter extends TableExporter {
 
 		let file = path.join(this.configs.directory, (this.configs as CSharpExporterConfigs).file_name);
 		if (!file.endsWith(".cs")) {
-			file += ".cs";
+			file += "." + this.extension;
 		}
 		this.save_text(file, this.declear_content.replace("%CLASSES%", class_text));
 		console.log(colors.green(`\t${file}`));

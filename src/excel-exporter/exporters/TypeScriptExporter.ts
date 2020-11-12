@@ -14,6 +14,7 @@ interface TypeScriptExporterConfigs extends ExporterConfigs {
 export class TypeScriptExporter extends TableExporter {
 
 	classes: string[] = [];
+	get extension(): string { return 'ts'}
 
 	constructor(configs: TypeScriptExporterConfigs) {
 		super(configs);

@@ -6,7 +6,7 @@ import * as colors from "colors";
 (async function main(argv: string[]) {
 
 	let config_file = argv[argv.length - 1];
-	if (config_file.endsWith(".json") && FileAccess.exists(config_file)) {
+	if (config_file.endsWith(".yaml") && FileAccess.exists(config_file)) {
 		let app = new ExcelExporterApplication(config_file);
 		app.parse();
 		app.export();

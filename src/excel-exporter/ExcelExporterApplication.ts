@@ -5,6 +5,8 @@ import { JSONExporter } from "./exporters/JSONExporter";
 import { CSharpExporter } from "./exporters/CSharpExporter";
 import * as colors from "colors";
 import { TypeScriptExporter } from "./exporters/TypeScriptExporter";
+import * as yaml from "js-yaml";
+import { YAMLExporter } from "./exporters/YAMLExporter";
 
 export interface Configurations {
 	/** 解析配置 */
@@ -20,6 +22,7 @@ const exporters: {[key:string]: new(config: ExporterConfigs) => TableExporter } 
 	json: JSONExporter,
 	csharp: CSharpExporter,
 	typescript: TypeScriptExporter,
+	yaml: YAMLExporter,
 }
 
 
@@ -32,7 +35,7 @@ export class ExcelExporterApplication {
 
 	constructor(config_file: string) {
 		let file = FileAccess.open(config_file, ModeFlags.READ);
-		this.configs = JSON.parse(file.get_as_utf8_string()) as Configurations;
+		this.configs = yaml.load(file.get_as_utf8_string()) as Configurations;
 		file.close();
 		this.parser = new TableParser(this.configs.parser);
 
@@ -47,9 +50,9 @@ export class ExcelExporterApplication {
 	}
 
 	parse() {
-		for (const item of this.configs.input) {
-			console.log(colors.grey(`解析配表文件: ${item.file}`));
-			let sheets = this.parser.parse_xlsl(item.file);
+		for (const file of this.configs.input) {
+			console.log(colors.grey(`解析配表文件: ${file}`));
+			let sheets = this.parser.parse_xlsl(file);
 			for (const name in sheets) {
 				this.tables[name] = sheets[name];
 			}
