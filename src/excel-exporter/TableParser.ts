@@ -2,7 +2,14 @@ import * as xlsl from "xlsx";
 import { FileAccess, ModeFlags } from "tiny/io";
 import * as colors from "colors";
 
-type RawTableData = xlsl.CellObject[][];
+interface RawTableCell extends xlsl.CellObject {
+    /** Column number */
+    column: number;
+    /** Row number */
+    row: number;
+}
+
+type RawTableData = RawTableCell[][];
 
 export interface ParserConfigs {
 	/** 第一行作为注释 */
@@ -77,15 +84,23 @@ export class TableParser {
 		var rows: RawTableData = [];
 		for (let r = range.s.r; r <= range.e.r; r++) {
 			let R = xlsl.utils.encode_row(r);
-			let row: xlsl.CellObject[] = [];
+			let row: RawTableCell[] = [];
 			for (let c = range.s.c; c <= range.e.c; c++) {
 				let C = xlsl.utils.encode_col(c);
-				let cell = sheet[`${C}${R}`] as xlsl.CellObject;
+				let cell: RawTableCell = {
+					...(sheet[`${C}${R}`] as xlsl.CellObject),
+					column: c,
+					row: r,
+				};
 				row.push(cell);
 			}
 			rows.push(row);
 		}
 		return rows;
+	}
+
+	protected format_cell_position(cell: RawTableCell): string {
+		return xlsl.utils.encode_cell({c: cell.column, r: cell.row});
 	}
 
 	protected process_table(raw: RawTableData): TableData {
@@ -117,7 +132,8 @@ export class TableParser {
 				var t = this.get_data_type(cell);
 				if (type_order.indexOf(t) < type_order.indexOf(type)) {
 					if (type != DataType.null) {
-						console.log(colors.yellow(`\t\t${first.v} 的数据类型被提升为 ${t}\n\t\t  ${this.dump_row_values(rows[start_raw + i])}`));
+						// console.log(colors.yellow(`\t\t${first.v} 的数据类型被提升为 ${t}\n\t\t  ${this.dump_row_values(rows[start_raw + i])}`));
+						console.log(colors.yellow(`\t\t${first.v}(${this.format_cell_position(first).replace(/\d+/, '')}列) 的数据类型被提升为 ${t} 因为 ${this.format_cell_position(cell)} 的值为 ${cell.w}`));
 					}
 					type = t;
 				}
@@ -210,7 +226,7 @@ export class TableParser {
 		}
 	}
 
-	protected is_valid_row(row: xlsl.CellObject[]) {
+	protected is_valid_row(row: RawTableCell[]) {
 		let first = row[0];
 		if (this.get_data_type(first) == DataType.string && (first.v as string).trim().startsWith(SKIP_PREFIX)) {
 			return false;
@@ -227,8 +243,8 @@ export class TableParser {
 		return true;
 	}
 
-	protected get_column(table: RawTableData, column: number, start_row: number = 0): xlsl.CellObject[] {
-		let cells: xlsl.CellObject[] = [];
+	protected get_column(table: RawTableData, column: number, start_row: number = 0): RawTableCell[] {
+		let cells: RawTableCell[] = [];
 		for (let r = start_row; r < table.length; r++) {
 			const row = table[r];
 			cells.push(row[column]);
@@ -236,7 +252,7 @@ export class TableParser {
 		return cells;
 	}
 
-	protected get_data_type(cell: xlsl.CellObject): DataType {
+	protected get_data_type(cell: RawTableCell): DataType {
 		if (!cell) return DataType.null;
 		switch (cell.t) {
 			case 'b':
@@ -268,7 +284,7 @@ export class TableParser {
 		}
 	}
 
-	protected dump_row_values(row: xlsl.CellObject[]) {
+	protected dump_row_values(row: RawTableCell[]) {
 		let ret = [];
 		for (const cell of row) {
 			ret.push(this.get_cell_value(cell, this.get_data_type(cell)));
