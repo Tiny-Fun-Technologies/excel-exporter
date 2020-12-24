@@ -9,8 +9,13 @@
 			"skipFiles": [
 				"<node_internals>/**"
 			],
-			// "cwd": "D:/work/repositories/zombie/config/新配表",
-			"cwd": "${workspaceFolder}",
+			"sourceMapPathOverrides": {
+				"webpack:///./~/*": "${workspaceRoot}/node_modules/*",
+				"webpack:///./*": "${workspaceRoot}/*",
+				"webpack:///*": "*"
+			},
+			"cwd": "D:/work/repositories/zombie/config/新配表",
+			// "cwd": "${workspaceFolder}",
 			"program": "${workspaceFolder}/dist/binary.js",
 			"args": [
 				"./excel-exporter.yaml"

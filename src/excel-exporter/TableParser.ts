@@ -87,11 +87,12 @@ export class TableParser {
 			let row: RawTableCell[] = [];
 			for (let c = range.s.c; c <= range.e.c; c++) {
 				let C = xlsl.utils.encode_col(c);
-				let cell: RawTableCell = {
-					...(sheet[`${C}${R}`] as xlsl.CellObject),
+				let origin_cell = sheet[`${C}${R}`] as xlsl.CellObject;
+				let cell: RawTableCell = origin_cell ? {
+					...origin_cell,
 					column: c,
 					row: r,
-				};
+				} : null;
 				row.push(cell);
 			}
 			rows.push(row);
@@ -132,7 +133,6 @@ export class TableParser {
 				var t = this.get_data_type(cell);
 				if (type_order.indexOf(t) < type_order.indexOf(type)) {
 					if (type != DataType.null) {
-						// console.log(colors.yellow(`\t\t${first.v} 的数据类型被提升为 ${t}\n\t\t  ${this.dump_row_values(rows[start_raw + i])}`));
 						console.log(colors.yellow(`\t\t${first.v}(${this.format_cell_position(first).replace(/\d+/, '')}列) 的数据类型被提升为 ${t} 因为 ${this.format_cell_position(cell)} 的值为 ${cell.w}`));
 					}
 					type = t;
@@ -269,7 +269,7 @@ export class TableParser {
 		}
 	}
 
-	protected get_cell_value(cell: xlsl.CellObject, type: DataType) {
+	protected get_cell_value(cell: RawTableCell, type: DataType) {
 		switch (type) {
 			case DataType.bool:
 				return cell && cell.v as boolean == true;
