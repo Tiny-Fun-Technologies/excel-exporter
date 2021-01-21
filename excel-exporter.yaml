@@ -1,5 +1,7 @@
 parser:
   first_row_as_field_comment: true
+  constant_array_length:
+    - EffectSequence
 input:
   - 配置表.xlsx
 output:

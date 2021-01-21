@@ -14,8 +14,8 @@ type RawTableData = RawTableCell[][];
 export interface ParserConfigs {
 	/** 第一行作为注释 */
 	first_row_as_field_comment: boolean;
-	/** 固定数组长度 */
-	constant_array_length: boolean;
+	/** 固定数组长度的表名称 */
+	constant_array_length: string[];
 }
 
 export enum DataType {
@@ -74,7 +74,7 @@ export class TableParser {
 		let tables: { [key: string]: TableData } = {};
 		for (const name in raw_tables) {
 			console.log(colors.grey(`\t解析配置表 ${name}`));
-			tables[name] = this.process_table(raw_tables[name]);
+			tables[name] = this.process_table(name, raw_tables[name]);
 		}
 		return tables;
 	}
@@ -104,7 +104,7 @@ export class TableParser {
 		return xlsl.utils.encode_cell({c: cell.column, r: cell.row});
 	}
 
-	protected process_table(raw: RawTableData): TableData {
+	protected process_table(sheet_name: string, raw: RawTableData): TableData {
 		const type_order = [ DataType.string, DataType.float, DataType.int, DataType.bool, DataType.null];
 		let headers: ColumnDescription[] = [];
 
@@ -163,11 +163,11 @@ export class TableParser {
 			}
 			values.push(row);
 		}
-		return this.parse_values(headers, values);
+		return this.parse_values(sheet_name, headers, values);
 	}
 
 
-	protected parse_values(raw_headers : ColumnDescription[], raw_values: RawTableData) {
+	protected parse_values(sheet_name: string, raw_headers : ColumnDescription[], raw_values: RawTableData) {
 		type FiledInfo = {
 			column: ColumnDescription,
 			start: number,
@@ -207,7 +207,7 @@ export class TableParser {
 					let arr = [];
 					for (const idx of filed.indexes) {
 						const cell = raw_row[idx];
-						if (cell || this.configs.constant_array_length) {
+						if (cell || (Array.isArray(this.configs.constant_array_length) && this.configs.constant_array_length.includes(sheet_name))) {
 							arr.push(this.get_cell_value(cell, filed.column.type));
 						}
 					}
