@@ -18,12 +18,15 @@ export class TableExporter {
 	get extension(): string { return ''}
 
 	protected line(text = "", indent = 0) {
+		return this.indent_text(text, indent) + '\n';
+	}
+
+	protected indent_text(text = "", indent = 0) {
 		let line = "";
 		for (let i = 0; i < indent; i++) {
 			line += "\t";
 		}
 		line += text;
-		line += "\n";
 		return line;
 	}
 

@@ -55,17 +55,7 @@ export class JSONExporter extends TableExporter {
 	}
 
 	export_json_object(name: string, table: TableData) {
-		let headers = table.headers;
-		let values = [];
-		for (const row of table.values) {
-			let new_row = {};
-			for (let i = 0; i < headers.length; i++) {
-				const field = headers[i];
-				new_row[field.name] = row[i];
-			}
-			values.push(new_row);
-		}
-		return this.recursively_order_keys(values);
+		return this.recursively_order_keys(table.data);
 	}
 
 	export(name: string, table: TableData) {

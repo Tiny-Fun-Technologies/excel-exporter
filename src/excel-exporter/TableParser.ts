@@ -3,11 +3,11 @@ import { FileAccess, ModeFlags } from "tiny/io";
 import * as colors from "colors";
 
 interface RawTableCell extends xlsl.CellObject {
-    /** Column number */
-    column: number;
-    /** Row number */
-    row: number;
-}
+	/** Column number */
+	column: number;
+	/** Row number */
+	row: number;
+};
 
 type RawTableData = RawTableCell[][];
 
@@ -24,6 +24,128 @@ export enum DataType {
 	bool = 'bool',
 	float = 'float',
 	string = 'string',
+	struct = 'struct',
+}
+
+export class Field {
+
+	static readonly TYPE_ORDER = [ DataType.struct, DataType.string, DataType.float, DataType.int, DataType.bool, DataType.null ];
+
+	/** 该字段的列范围（下标从0开始，包含 start 和 end 所在的列） */
+	columns: { start: number; end: number; }
+	/** 字段名 */
+	name: string;
+	/** 注释 */
+	comment?: string;
+	/** 子字段 */
+	children: ReadonlyArray<Field>;
+	/** 数据类型 */
+	type?: DataType;
+
+	/** 添加子字段 */
+	add_field(field: Field) {
+		let target = this.get_inner_parent_field(field);
+		if (target) {
+			target.add_child_field(field);
+		}
+	}
+
+	private add_child_field(field: Field) {
+		if (!field) return;
+		if (!this.children) this.children = [];
+		(this.children as Field[]).push(field);
+		this.type = DataType.struct;
+	}
+
+	private get_inner_parent_field(field: Field): Field {
+		if (this.children) {
+			for (const cf of this.children) {
+				let target = cf.get_inner_parent_field(field);
+				if (target) return target;
+			}
+		}
+		if (this.is_parent_of(field)){
+			return this;
+		}
+		return undefined;
+	}
+
+	private is_parent_of(field: Field) {
+		return field.columns.start >= this.columns.start && field.columns.end <= this.columns.end;
+	}
+
+	get_atomic_field_at_column(column: number): Field {
+		if (this.children) {
+			for (const cf of this.children) {
+				let target = cf.get_atomic_field_at_column(column);
+				if (target) return target;
+			}
+		}
+		if (!this.children && this.columns.start === this.columns.end && this.columns.start === column) {
+			return this;
+		}
+		return undefined;
+	}
+
+	/** 是否为数组 */
+	public get is_array() : boolean { return this._is_array; }
+	private _is_array : boolean;
+
+	public build() {
+		if (this.children) {
+			let named_fields: {[key: string]: Field[]} = {};
+			for (const c of this.children) {
+				c.build();
+				let arr = named_fields[c.name] || [];
+				arr.push(c);
+				named_fields[c.name] = arr;
+			}
+			for (const [name, fields] of Object.entries(named_fields)) {
+				if (fields.length > 1) {
+					const type = Field.TYPE_ORDER[Math.min(...(fields.map(f => Field.TYPE_ORDER.indexOf(f.type))))];
+					for (const f of fields) {
+						f._is_array = true;
+						f.type = type;
+					}
+				}
+			}
+		}
+	}
+
+	/** 解析一条数据 */
+	public parse_row(row: RawTableCell[]) {
+		if (this.type != DataType.struct) {
+			return this.get_cell_value(row[this.columns.start], this.type);
+		} else if (this.children && this.children.length) {
+			let obj = {};
+			for (const c of this.children) {
+				let value = c.parse_row(row);
+				if (c.is_array) {
+					let arr: any[] = obj[c.name] || [];
+					arr.push(value);
+					obj[c.name] = arr;
+				} else {
+					obj[c.name] = value;
+				}
+			}
+			return obj;
+		}
+	}
+
+	protected get_cell_value(cell: RawTableCell, type: DataType) {
+		switch (type) {
+			case DataType.bool:
+				return cell && cell.v as boolean == true;
+			case DataType.int:
+				return cell ? cell.v as number : 0;
+			case DataType.float:
+				return cell ? cell.v as number : 0;
+			case DataType.string:
+				return cell ? cell.v + '' : '';
+			default:
+				return null;
+		}
+	}
 }
 
 const TypeCompatibility = {
@@ -42,11 +164,17 @@ export interface ColumnDescription {
 }
 
 export interface TableData {
-	headers: ColumnDescription[],
-	values: any[][]
+	struct: Field;
+	data: {[key: string]: any}[];
 }
 
-const SKIP_PREFIX = "@skip";
+export enum Keywords {
+	SKIP = '@skip',
+	FIELD = '@feild',
+	COMMENT = '@comment'
+}
+
+const SKIP_WORDS = [ Keywords.SKIP, Keywords.FIELD, Keywords.COMMENT ];
 
 export class TableParser {
 
@@ -64,17 +192,19 @@ export class TableParser {
 		var file = FileAccess.open(path, ModeFlags.READ);
 		let wb = xlsl.read(file.get_as_array());
 		file.close();
-		let raw_tables: { [key: string]: RawTableData } = {};
+		let raw_tables: {[key: string]: RawTableData } = {};
+		let table_fields: {[key: string]: Field} = {};
 		for (const name of wb.SheetNames) {
 			let sheet_name = name.trim();
-			if (sheet_name.startsWith(SKIP_PREFIX)) continue;
+			if (sheet_name.startsWith(Keywords.SKIP)) continue;
 			raw_tables[sheet_name] = this.parse_sheet(wb.Sheets[name]);
+			table_fields[sheet_name] = this.parse_struct(sheet_name, wb.Sheets[name]);
 		}
 
 		let tables: { [key: string]: TableData } = {};
 		for (const name in raw_tables) {
 			console.log(colors.grey(`\t解析配置表 ${name}`));
-			tables[name] = this.process_table(name, raw_tables[name]);
+			tables[name] = this.process_table(table_fields[name], raw_tables[name]);
 		}
 		return tables;
 	}
@@ -100,135 +230,103 @@ export class TableParser {
 		return rows;
 	}
 
-	protected format_cell_position(cell: RawTableCell): string {
-		return xlsl.utils.encode_cell({c: cell.column, r: cell.row});
+	protected parse_struct(name: string, sheet: xlsl.WorkSheet): Field {
+		let range = xlsl.utils.decode_range(sheet['!ref']);
+		const root = new Field();
+		root.name = name;
+		root.columns = { start: range.s.c, end: range.e.c };
+
+		const get_cell_range = (c: number, r: number): xlsl.Range => {
+			const merges = sheet['!merges'];
+			let ranges = new Map<number, xlsl.Range>();
+			for (const m of merges) {
+				if (c >= m.s.c && c <= m.e.c && r >= m.s.r && r <= m.e.r) {
+					ranges.set(Math.pow(m.s.c - c, 2) + Math.pow(m.s.r - r, 2), m);
+				}
+			}
+			let range = ranges.get(Math.min( ...(ranges.keys()) ));
+			if (!range) {
+				range = {
+					s: { c, r },
+					e: { c, r }
+				};
+			}
+			return range;
+		};
+
+		for (let r = range.s.r; r <= range.e.r; r++) {
+			let R = xlsl.utils.encode_row(r);
+			let first = sheet[`${xlsl.utils.encode_col(range.s.c)}${R}`] as xlsl.CellObject;
+			if (!first || first.t !== 's' || (first.v as string).trim() !== '@feild') {
+				continue;
+			}
+			const upperROW = xlsl.utils.encode_row(r-1);
+			const upper_first = sheet[`${xlsl.utils.encode_col(range.s.c)}${upperROW}`] as xlsl.CellObject;
+			const has_comment = upper_first && upper_first.t === 's' && (upper_first.v as string).trim() === '@comment';
+
+			for (let c = range.s.c + 1; c <= range.e.c; c++) {
+				const C = xlsl.utils.encode_col(c);
+				const cell = sheet[`${C}${R}`] as xlsl.CellObject;
+				if (cell && cell.t == 's' && (cell.v as string).trim().length) {
+					let field = new Field();
+					field.name = (cell.v as string).trim();
+					if (has_comment) {
+						let comment_cell = sheet[`${C}${upperROW}`] as xlsl.CellObject;
+						if (comment_cell && comment_cell.t === 's') {
+							field.comment = (comment_cell.v as string).trim();
+						}
+					}
+					let range = get_cell_range(c, r);
+					field.columns = { start: range.s.c, end: range.e.c };
+					root.add_field(field);
+				}
+			}
+		}
+		return root;
 	}
 
-	protected process_table(sheet_name: string, raw: RawTableData): TableData {
-		const type_order = [ DataType.string, DataType.float, DataType.int, DataType.bool, DataType.null];
-		let headers: ColumnDescription[] = [];
+	protected process_table(root: Field, raw: RawTableData) {
 
-		let column_values: xlsl.CellObject[][] = [];
-		let ignored_columns = new Set<number>();
 		// 去除无用的列
 		let rows: RawTableData = [];
-		for (const row of raw) {
-			if (this.is_valid_row(row)) {
+		let data_start_at_row = -1;
+		for (let i = 0; i < raw.length; i++) {
+			const row = raw[i];
+			if (this.is_data_row(row)) {
 				rows.push(row);
+				if (data_start_at_row < 0) data_start_at_row = i;
 			}
 		}
 
-		let column = 0;
 		for (let c = 0; c < rows[0].length; c++) {
-			let first = rows[0][c];
-			if (this.get_data_type(first) != DataType.string) {
-				ignored_columns.add(c);
+			let field = root.get_atomic_field_at_column(c);
+			if (!field) {
 				continue;
 			}
-			const start_raw = 1;
-			let column_cells = this.get_column(rows, c, start_raw);
+			const column_cells = this.get_column(rows, c);
 			let type = DataType.null;
 			for (let i = 0; i < column_cells.length; i++) {
 				const cell = column_cells[i];
 				var t = this.get_data_type(cell);
-				if (type_order.indexOf(t) < type_order.indexOf(type)) {
+				if (Field.TYPE_ORDER.indexOf(t) < Field.TYPE_ORDER.indexOf(type)) {
 					if (type != DataType.null) {
-						console.log(colors.yellow(`\t\t${first.v}(${this.format_cell_position(first).replace(/\d+/, '')}列) 的数据类型被提升为 ${t} 因为 ${this.format_cell_position(cell)} 的值为 ${cell.w}`));
+						console.log(colors.yellow(`\t\t${field.name}(${xlsl.utils.encode_col(c)}列) 的数据类型被提升为 ${t} 因为 ${this.format_cell_position(cell)} 的值为 ${cell.w}`));
 					}
 					type = t;
 				}
 			}
-			let comment: string = undefined;
-			if (this.configs.first_row_as_field_comment) {
-				comment = this.get_cell_value(raw[0][c], DataType.string) as string;
-			}
-			headers.push({
-				type,
-				comment,
-				name: first.v as string,
-			});
-
-			column_values.push([]);
-			for (const cell of column_cells) {
-				column_values[column].push(cell);
-			}
-			column += 1;
+			field.type = type;
 		}
-
-		let values: RawTableData = [];
-		for (let r = 0; r < rows.length - 1; r++) {
-			let row: any = [];
-			for (let c = 0; c < column_values.length; c++) {
-				row.push(column_values[c][r])
-			}
-			values.push(row);
-		}
-		return this.parse_values(sheet_name, headers, values);
-	}
-
-
-	protected parse_values(sheet_name: string, raw_headers : ColumnDescription[], raw_values: RawTableData) {
-		type FiledInfo = {
-			column: ColumnDescription,
-			start: number,
-			indexes: number[]
-		};
-		let field_maps = new Map<string, FiledInfo>();
-		let field_list: FiledInfo[] = [];
-		let c_idx = 0;
-		for (const column of raw_headers) {
-			if (!field_maps.has(column.name)) {
-				const field = {
-					column,
-					start: c_idx,
-					indexes: [ c_idx ]
-				};
-				field_list.push(field);
-				field_maps.set(column.name, field);
-			} else {
-				let field = field_maps.get(column.name);
-				field.column.is_array = true;
-				field.indexes.push(c_idx);
-				if (TypeCompatibility[column.type] > TypeCompatibility[field.column.type]) {
-					field.column.type = column.type;
-				}
-			}
-			c_idx += 1;
-		}
-		let headers: ColumnDescription[] = [];
-		for (const filed of field_list) {
-			headers.push(filed.column);
-		}
-		let values: any[][] = [];
-		for (const raw_row of raw_values) {
-			let row: any[] = [];
-			for (const filed of field_list) {
-				if (filed.column.is_array) {
-					let arr = [];
-					for (const idx of filed.indexes) {
-						const cell = raw_row[idx];
-						if (cell || (Array.isArray(this.configs.constant_array_length) && this.configs.constant_array_length.includes(sheet_name))) {
-							arr.push(this.get_cell_value(cell, filed.column.type));
-						}
-					}
-					row.push(arr);
-				} else {
-					const cell = raw_row[filed.start];
-					row.push(this.get_cell_value(cell, filed.column.type));
-				}
-			}
-			values.push(row);
-		}
-
+		root.build();
 		return {
-			headers,
-			values
-		}
+			struct: root,
+			data: rows.map(row => root.parse_row(row))
+		};
 	}
 
-	protected is_valid_row(row: RawTableCell[]) {
+	protected is_data_row(row: RawTableCell[]) {
 		let first = row[0];
-		if (this.get_data_type(first) == DataType.string && (first.v as string).trim().startsWith(SKIP_PREFIX)) {
+		if (this.get_data_type(first) == DataType.string && SKIP_WORDS.includes((first.v as string).trim() as Keywords)) {
 			return false;
 		}
 		let all_empty = true;
@@ -243,9 +341,9 @@ export class TableParser {
 		return true;
 	}
 
-	protected get_column(table: RawTableData, column: number, start_row: number = 0): RawTableCell[] {
+	protected get_column(table: RawTableData, column: number): RawTableCell[] {
 		let cells: RawTableCell[] = [];
-		for (let r = start_row; r < table.length; r++) {
+		for (let r = 0; r < table.length; r++) {
 			const row = table[r];
 			cells.push(row[column]);
 		}
@@ -290,5 +388,9 @@ export class TableParser {
 			ret.push(this.get_cell_value(cell, this.get_data_type(cell)));
 		}
 		return ret;
+	}
+
+	protected format_cell_position(cell: RawTableCell): string {
+		return xlsl.utils.encode_cell({c: cell.column, r: cell.row});
 	}
 }

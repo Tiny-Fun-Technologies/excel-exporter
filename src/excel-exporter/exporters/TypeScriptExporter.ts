@@ -1,5 +1,5 @@
 import { TableExporter, ExporterConfigs } from "excel-exporter/TableExporter";
-import { TableData, DataType } from "excel-exporter/TableParser";
+import { TableData, DataType, Field } from "excel-exporter/TableParser";
 import * as colors from "colors";
 import { path } from "tiny/path";
 
@@ -31,57 +31,70 @@ export class TypeScriptExporter extends TableExporter {
 		);
 	}
 
+	protected export_field(field: Field, indent = 0, ignore_root = false) {
+		let body = "";
+		let type = "any";
+		switch (field.type) {
+			case DataType.bool:
+				type = "boolean";
+				break;
+			case DataType.string:
+				type = "string";
+				break;
+			case DataType.float:
+			case DataType.int:
+				type = "number";
+				break;
+			case DataType.struct: {
+				type = '{\n';
+				let ignoreArrays = new Set<string>();
+				for (const c of field.children) {
+					if (ignoreArrays.has(c.name)) continue;
+					type += this.indent_text(this.export_field(c, indent + 1), indent);
+					if (c.is_array) {
+						ignoreArrays.add(c.name);
+					}
+				}
+				type += ignore_root ? '' : this.indent_text('}', indent);
+			} break;
+			default:
+				type = "any";
+				break;
+		}
+		if (field.is_array) type = `ReadonlyArray<${type}>`;
+		if (field.comment) {
+			if (field.comment.trim().length) {
+				let comments = field.comment.split("\n");
+				if (comments.length > 1) {
+					body += this.line("/** ", 1);
+					for (const comment of comments) {
+						body += this.line(" * " + comment.trim() + "  ", 1);
+					}
+					body += this.line(" */", 1);
+				} else {
+					body += this.line(`/** ${comments[0].trim()} */`, 1);
+				}
+			}
+		}
+		body += ignore_root ? this.line(`${type}`, indent) : this.line(`readonly ${field.name}: ${type};`, indent);
+		return body;
+	}
+
 	protected export_table(name: string, table: TableData, export_type: "class" | "interface", declaration: boolean) {
 		let configs = (this.configs as TypeScriptExporterConfigs);
 		let class_name = `${configs.class_name_prefix}${name}${configs.class_name_extension}`;
 
-		let body = "";
-		for (const field of table.headers) {
-			let type = "any";
-			switch (field.type) {
-				case DataType.bool:
-					type = "boolean";
-					break;
-				case DataType.string:
-					type = "string";
-					break;
-				case DataType.float:
-				case DataType.int:
-					type = "number";
-					break;
-				default:
-					type = "any";
-					break;
-			}
-			if (field.is_array) {
-				type += "[]";
-			}
-			if (field.comment) {
-				if (field.comment.trim().length) {
-					let comments = field.comment.split("\n");
-					if (comments.length > 1) {
-						body += this.line("/** ", 1);
-						for (const comment of comments) {
-							body += this.line(" * " + comment.trim() + "  ", 1);
-						}
-						body += this.line(" */", 1);
-					} else {
-						body += this.line(`/** ${comments[0].trim()} */`, 1);
-					}
-				}
-			}
-			body += this.line(`${field.name}: ${type};`, 1);
-		}
+		let body = this.export_field(table.struct, 0, true);
 		if (export_type == "class" && !declaration) {
-			body += this.line();
 			body += this.line(`static $bind_rows(rows: object[]) {`, 1);
 			body += this.line(`for (const row of rows) {`, 2);
 			body += this.line(`Object.setPrototypeOf(row, ${class_name}.prototype);`, 3);
 			body += this.line("}", 2);
 			body += this.line("}", 1);
+		} else {
+			export_type = 'interface';
 		}
-		let export_method = declaration ? "declare" : "export";
-		let class_text = this.line(`${export_method} ${export_type} ${class_name} {\n${body}\n}`);
+		let class_text = this.line(`export ${export_type} ${class_name} ${body}\n}`);
 		this.classes.push(class_text);
 	}
 
