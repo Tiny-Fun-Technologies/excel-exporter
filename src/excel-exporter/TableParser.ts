@@ -41,6 +41,8 @@ export class Field {
 	children: ReadonlyArray<Field>;
 	/** 数据类型 */
 	type?: DataType;
+	/** 保持数组长度和配置表中的列数量一致，没填的数据使用 null 填充 */
+	constant_array_length?: boolean;
 
 	/** 添加子字段 */
 	add_field(field: Field) {
@@ -95,6 +97,7 @@ export class Field {
 		if (this.children) {
 			let named_fields: {[key: string]: Field[]} = {};
 			for (const c of this.children) {
+				c.constant_array_length = this.constant_array_length;
 				c.build();
 				let arr = named_fields[c.name] || [];
 				arr.push(c);
@@ -102,7 +105,9 @@ export class Field {
 			}
 			for (const [name, fields] of Object.entries(named_fields)) {
 				if (fields.length > 1) {
-					const type = Field.TYPE_ORDER[Math.min(...(fields.map(f => Field.TYPE_ORDER.indexOf(f.type))))];
+					let indeies = fields.map(f => Field.TYPE_ORDER.indexOf(f.type));
+					indeies = indeies.filter(idx => idx >= 0);
+					const type = Field.TYPE_ORDER[Math.min(...indeies)];
 					for (const f of fields) {
 						f._is_array = true;
 						f.type = type;
@@ -118,17 +123,21 @@ export class Field {
 			return this.get_cell_value(row[this.columns.start], this.type);
 		} else if (this.children && this.children.length) {
 			let obj = {};
+			let isAllNullish = true;
 			for (const c of this.children) {
 				let value = c.parse_row(row);
 				if (c.is_array) {
 					let arr: any[] = obj[c.name] || [];
-					arr.push(value);
+					if (this.constant_array_length || value != null) {
+						arr.push(value);
+					}
 					obj[c.name] = arr;
 				} else {
 					obj[c.name] = value;
 				}
+				isAllNullish = isAllNullish && value == null;
 			}
-			return obj;
+			return isAllNullish ? null : obj;
 		}
 	}
 
@@ -317,6 +326,7 @@ export class TableParser {
 			}
 			field.type = type;
 		}
+		root.constant_array_length = this.configs.constant_array_length && this.configs.constant_array_length.includes(root.name);
 		root.build();
 		return {
 			struct: root,
