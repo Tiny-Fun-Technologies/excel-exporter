@@ -106,24 +106,40 @@ export class Field {
 		if (this.children) {
 			let named_fields: {[key: string]: Field[]} = {};
 			for (const c of this.children) {
-				c.constant_array_length = this.constant_array_length;
-				c.build();
 				let arr = named_fields[c.name] || [];
 				arr.push(c);
 				named_fields[c.name] = arr;
 			}
 			for (const [name, fields] of Object.entries(named_fields)) {
-				if (fields.length > 1) {
-					let indeies = fields.map(f => Field.TYPE_ORDER.indexOf(f.type));
-					indeies = indeies.filter(idx => idx >= 0);
-					const type = Field.TYPE_ORDER[Math.min(...indeies)];
+				if (fields.length > 1) { // 推断数组类型
+					const type = this.infer_field_type(fields);
 					for (const f of fields) {
 						f._is_array = true;
 						f.type = type;
+						if (type === DataType.struct) { // 数组元素的类型
+							for (const keys of fields.map( f => f.children.map(cf => cf.name) )) {
+								for (const key of keys) {
+									let same_name_fileds = fields.map( f => f.children.find( cf => cf.name === key));
+									const ctype = this.infer_field_type(same_name_fileds);
+									same_name_fileds.forEach( f => { f.type = ctype });
+								}
+							}
+						}
 					}
 				}
 			}
+			for (const c of this.children) {
+				c.constant_array_length = this.constant_array_length;
+				c.build();
+			}
 		}
+	}
+
+	protected infer_field_type(fields: Field[]) {
+		let indeies = fields.map(f => Field.TYPE_ORDER.indexOf(f.type));
+		indeies = indeies.filter(idx => idx >= 0);
+		const type = Field.TYPE_ORDER[Math.min(...indeies)];
+		return type;
 	}
 
 	/** 解析一条数据 */
