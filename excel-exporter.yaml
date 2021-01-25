@@ -1,9 +1,10 @@
-parser:
-  first_row_as_field_comment: true
-  constant_array_length:
-    - EffectSequence
 input:
   - 配置表.xlsx
+parser:
+  first_column_as_id: true # 第一列用作 ID 列
+  constant_array_length: [
+    # 这里填入需要固定数组长度的表名称
+  ]
 output:
   json:
     enabled: true

@@ -2,6 +2,24 @@ import * as xlsl from "xlsx";
 import { FileAccess, ModeFlags } from "tiny/io";
 import * as colors from "colors";
 
+export enum Keywords {
+	SKIP = '@skip',
+	FIELD = '@field',
+	COMMENT = '@comment'
+}
+
+const SKIP_WORDS = [ Keywords.SKIP, Keywords.FIELD, Keywords.COMMENT ];
+
+export enum DataType {
+	null = 'null',
+	int = 'int',
+	bool = 'bool',
+	float = 'float',
+	string = 'string',
+	struct = 'struct',
+}
+
+
 interface RawTableCell extends xlsl.CellObject {
 	/** Column number */
 	column: number;
@@ -12,19 +30,10 @@ interface RawTableCell extends xlsl.CellObject {
 type RawTableData = RawTableCell[][];
 
 export interface ParserConfigs {
-	/** 第一行作为注释 */
-	first_row_as_field_comment: boolean;
+	/** 第一列作为ID */
+	first_column_as_id: boolean;
 	/** 固定数组长度的表名称 */
 	constant_array_length: string[];
-}
-
-export enum DataType {
-	null = 'null',
-	int = 'int',
-	bool = 'bool',
-	float = 'float',
-	string = 'string',
-	struct = 'struct',
 }
 
 export class Field {
@@ -120,7 +129,12 @@ export class Field {
 	/** 解析一条数据 */
 	public parse_row(row: RawTableCell[]) {
 		if (this.type != DataType.struct) {
-			return this.get_cell_value(row[this.columns.start], this.type);
+			const cell = row[this.columns.start];
+			let value = this.get_cell_value(cell, this.type);
+			if (this.is_array && !this.constant_array_length && (!cell || cell.t === 'z')) {
+				value = null;
+			}
+			return value;
 		} else if (this.children && this.children.length) {
 			let obj = {};
 			let isAllNullish = true;
@@ -176,14 +190,6 @@ export interface TableData {
 	struct: Field;
 	data: {[key: string]: any}[];
 }
-
-export enum Keywords {
-	SKIP = '@skip',
-	FIELD = '@feild',
-	COMMENT = '@comment'
-}
-
-const SKIP_WORDS = [ Keywords.SKIP, Keywords.FIELD, Keywords.COMMENT ];
 
 export class TableParser {
 
@@ -244,13 +250,21 @@ export class TableParser {
 		const root = new Field();
 		root.name = name;
 		root.columns = { start: range.s.c, end: range.e.c };
+		if (this.configs.first_column_as_id) {
+			let id = new Field();
+			id.name = 'id';
+			id.columns = { start: 0, end: 0 };
+			root.add_field(id);
+		}
 
 		const get_cell_range = (c: number, r: number): xlsl.Range => {
-			const merges = sheet['!merges'];
 			let ranges = new Map<number, xlsl.Range>();
-			for (const m of merges) {
-				if (c >= m.s.c && c <= m.e.c && r >= m.s.r && r <= m.e.r) {
-					ranges.set(Math.pow(m.s.c - c, 2) + Math.pow(m.s.r - r, 2), m);
+			const merges = sheet['!merges'];
+			if (merges) {
+				for (const m of merges) {
+					if (c >= m.s.c && c <= m.e.c && r >= m.s.r && r <= m.e.r) {
+						ranges.set(Math.pow(m.s.c - c, 2) + Math.pow(m.s.r - r, 2), m);
+					}
 				}
 			}
 			let range = ranges.get(Math.min( ...(ranges.keys()) ));
@@ -266,12 +280,12 @@ export class TableParser {
 		for (let r = range.s.r; r <= range.e.r; r++) {
 			let R = xlsl.utils.encode_row(r);
 			let first = sheet[`${xlsl.utils.encode_col(range.s.c)}${R}`] as xlsl.CellObject;
-			if (!first || first.t !== 's' || (first.v as string).trim() !== '@feild') {
+			if (!first || first.t !== 's' || (first.v as string).trim() !== Keywords.FIELD) {
 				continue;
 			}
 			const upperROW = xlsl.utils.encode_row(r-1);
 			const upper_first = sheet[`${xlsl.utils.encode_col(range.s.c)}${upperROW}`] as xlsl.CellObject;
-			const has_comment = upper_first && upper_first.t === 's' && (upper_first.v as string).trim() === '@comment';
+			const has_comment = upper_first && upper_first.t === 's' && (upper_first.v as string).trim() === Keywords.COMMENT;
 
 			for (let c = range.s.c + 1; c <= range.e.c; c++) {
 				const C = xlsl.utils.encode_col(c);
