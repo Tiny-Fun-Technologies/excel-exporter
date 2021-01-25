@@ -61,7 +61,7 @@ export class TypeScriptExporter extends TableExporter {
 				type = "any";
 				break;
 		}
-		if (field.is_array) type = `ReadonlyArray<${type}>`;
+		if (field.is_array) type = `readonly ${type}[]`;
 		if (field.comment) {
 			if (field.comment.trim().length) {
 				let comments = field.comment.split("\n");
