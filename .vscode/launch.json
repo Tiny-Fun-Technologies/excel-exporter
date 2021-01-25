@@ -14,7 +14,8 @@
 				"webpack:///./*": "${workspaceRoot}/*",
 				"webpack:///*": "*"
 			},
-			"cwd": "D:/work/repositories/zombie/config/新配表",
+			"cwd": "C:/Users/Geequlim/Desktop/sheet",
+			// "cwd": "D:/work/repositories/zombie/config/新配表",
 			// "cwd": "${workspaceFolder}",
 			"program": "${workspaceFolder}/dist/binary.js",
 			"args": [
