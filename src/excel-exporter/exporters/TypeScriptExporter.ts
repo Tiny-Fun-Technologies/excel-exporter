@@ -57,6 +57,9 @@ export class TypeScriptExporter extends TableExporter {
 				}
 				type += ignore_root ? '' : this.indent_text('}', indent);
 			} break;
+			case DataType.null:
+				type = "null";
+				break;
 			default:
 				type = "any";
 				break;
