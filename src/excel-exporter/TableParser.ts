@@ -52,6 +52,8 @@ export class Field {
 	type?: DataType;
 	/** 保持数组长度和配置表中的列数量一致，没填的数据使用 null 填充 */
 	constant_array_length?: boolean;
+	/** 所属字段 */
+	parent: Field;
 
 	/** 添加子字段 */
 	add_field(field: Field) {
@@ -126,11 +128,18 @@ export class Field {
 							}
 						}
 					}
+					if (type === DataType.null) {
+						console.log(colors.red(`\t\t${name}(${xlsl.utils.encode_col(fields[0].columns.start)}列) 没有填入有效数据, 无法推断其数据类型`));
+					}
 				}
 			}
 			for (const c of this.children) {
 				c.constant_array_length = this.constant_array_length;
+				c.parent = this;
 				c.build();
+				if (c.type === DataType.null && !c._is_array) {
+					console.log(colors.red(`\t\t${c.name}(${xlsl.utils.encode_col(c.columns.start)}列) 没有填入有效数据, 无法推断其数据类型`));
+				}
 			}
 		}
 	}
