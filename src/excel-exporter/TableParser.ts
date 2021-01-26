@@ -164,17 +164,18 @@ export class Field {
 			let obj = {};
 			let isAllNullish = true;
 			for (const c of this.children) {
-				let value = c.parse_row(row);
+				const value = c.parse_row(row);
+				const is_null = this.check_is_null(row);
 				if (c.is_array) {
 					let arr: any[] = obj[c.name] || [];
-					if (this.constant_array_length || value) {
+					if (this.constant_array_length || value !== null) {
 						arr.push(value);
 					}
 					obj[c.name] = arr;
 				} else {
 					obj[c.name] = value;
 				}
-				isAllNullish = isAllNullish && c.check_is_null(row);
+				isAllNullish = isAllNullish && is_null;
 			}
 			return isAllNullish ? null : obj;
 		}
