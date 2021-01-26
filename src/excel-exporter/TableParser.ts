@@ -29,6 +29,11 @@ interface RawTableCell extends xlsl.CellObject {
 
 type RawTableData = RawTableCell[][];
 
+export interface TableData {
+	struct: Field;
+	data: {[key: string]: any}[];
+}
+
 export interface ParserConfigs {
 	/** 第一列作为ID */
 	first_column_as_id: boolean;
@@ -211,26 +216,6 @@ export class Field {
 			return !cell || cell.t === 'z';
 		}
 	}
-}
-
-const TypeCompatibility = {
-	string: 5,
-	float: 4,
-	int: 3,
-	bool: 2,
-	null: 1
-};
-
-export interface ColumnDescription {
-	type: DataType;
-	name: string;
-	is_array?: boolean;
-	comment?: string;
-}
-
-export interface TableData {
-	struct: Field;
-	data: {[key: string]: any}[];
 }
 
 export class TableParser {
