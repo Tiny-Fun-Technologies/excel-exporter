@@ -164,7 +164,7 @@ export class Field {
 			let obj = {};
 			let isAllNullish = true;
 			for (const c of this.children) {
-				let value = c.check_is_null(row) ? null : c.parse_row(row);
+				let value = c.parse_row(row);
 				if (c.is_array) {
 					let arr: any[] = obj[c.name] || [];
 					if (this.constant_array_length || value) {
@@ -174,7 +174,7 @@ export class Field {
 				} else {
 					obj[c.name] = value;
 				}
-				isAllNullish = isAllNullish && value == null;
+				isAllNullish = isAllNullish && c.check_is_null(row);
 			}
 			return isAllNullish ? null : obj;
 		}
@@ -183,7 +183,7 @@ export class Field {
 	protected get_cell_value(cell: RawTableCell, type: DataType) {
 		switch (type) {
 			case DataType.bool:
-				return cell && cell.v as boolean == true;
+				return cell ? cell.v as boolean == true : false;
 			case DataType.int:
 				return cell ? cell.v as number : 0;
 			case DataType.float:
