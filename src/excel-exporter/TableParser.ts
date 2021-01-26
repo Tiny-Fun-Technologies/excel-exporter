@@ -164,10 +164,10 @@ export class Field {
 			let obj = {};
 			let isAllNullish = true;
 			for (const c of this.children) {
-				let value = c.parse_row(row);
+				let value = c.check_is_null(row) ? null : c.parse_row(row);
 				if (c.is_array) {
 					let arr: any[] = obj[c.name] || [];
-					if (this.constant_array_length || value != null) {
+					if (this.constant_array_length || value) {
 						arr.push(value);
 					}
 					obj[c.name] = arr;
@@ -192,6 +192,22 @@ export class Field {
 				return cell ? cell.v + '' : '';
 			default:
 				return null;
+		}
+	}
+
+	protected check_is_null(row: RawTableCell[]): boolean {
+		if (this.children) {
+			let isAllNullish = true;
+			for (const c of this.children) {
+				isAllNullish = isAllNullish && c.check_is_null(row);
+				if (!isAllNullish) {
+					return false;
+				}
+			}
+			return isAllNullish;
+		} else {
+			let cell = row[this.columns.start];
+			return !cell || cell.t === 'z';
 		}
 	}
 }
