@@ -12,7 +12,7 @@ interface YAMLExporterConfigs extends ExporterConfigs {
 
 export class YAMLExporter extends JSONExporter {
 
-	get extension(): string { return 'yaml'}
+	get extension(): string { return this.configs.extension || 'yaml'; }
 
 	constructor(configs: ExporterConfigs) {
 		super(configs);

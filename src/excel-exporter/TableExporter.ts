@@ -5,6 +5,7 @@ import { path } from "tiny/path";
 export interface ExporterConfigs {
 	enabled: boolean,
 	directory: string,
+	extension?: string;
 }
 
 export class TableExporter {
@@ -15,7 +16,7 @@ export class TableExporter {
 		this.configs = configs;
 	}
 
-	get extension(): string { return ''}
+	get extension(): string { return this.configs.extension || ''; }
 
 	protected line(text = "", indent = 0) {
 		return this.indent_text(text, indent) + '\n';

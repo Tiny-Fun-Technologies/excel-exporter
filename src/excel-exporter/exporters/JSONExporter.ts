@@ -17,7 +17,7 @@ export class JSONExporter extends TableExporter {
 		}
 	}
 
-	get extension(): string { return 'json'}
+	get extension(): string { return this.configs.extension || 'json'; }
 
 	protected recursively_order_keys(unordered: object | Array<object>) {
 		// If it's an array - recursively order any
